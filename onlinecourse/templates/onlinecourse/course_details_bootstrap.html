@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    {% load static %}
+    <title>{{ course.name }}</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css">
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.min.js"></script>
+</head>
+<body>
+{% include 'onlinecourse/navbar.html' %}
+
+<!-- Page content -->
+<div class="container-fluid mt-3">
+    <!-- Course name -->
+    <h2>{{ course.name }}</h2>
+    <p class="text-muted">{{ course.description }}</p>
+
+    <!-- All lessons of the course, shown as Bootstrap cards -->
+    <div class="card-columns-vertical">
+        {% for lesson in course.lesson_set.all|dictsort:"order" %}
+        <div class="card mt-1">
+            <div class="card-header"><h5>Lesson {{ lesson.order|add:1 }}: {{ lesson.title }}</h5></div>
+            <div class="card-body">{{ lesson.content }}</div>
+        </div>
+        {% empty %}
+        <p>This course has no lessons yet.</p>
+        {% endfor %}
+    </div>
+
+    <!-- Exam section: only enrolled, signed-in learners can take the exam -->
+    {% if user.is_authenticated and is_enrolled %}
+    <button class="btn btn-primary btn-block mt-3" data-toggle="collapse" data-target="#exam">Start Exam</button>
+    <div id="exam" class="collapse">
+        <form id="questionform" action="{% url 'onlinecourse:submit' course.id %}" method="post">
+            {% csrf_token %}
+            {% for question in course.question_set.all %}
+            <div class="card mt-1">
+                <div class="card-header"><h5>{{ question.question_text }}</h5></div>
+                <div class="card-body">
+                    {% for choice in question.choice_set.all %}
+                    <div class="form-check">
+                        <label class="form-check-label">
+                            <input type="checkbox" name="choice_{{ choice.id }}"
+                                   class="form-check-input" id="{{ choice.id }}"
+                                   value="{{ choice.id }}">{{ choice.choice_text }}
+                        </label>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+            <input class="btn btn-success btn-block mt-2" type="submit" value="Submit">
+        </form>
+    </div>
+    {% elif user.is_authenticated %}
+    <form class="mt-3" action="{% url 'onlinecourse:enroll' course.id %}" method="post">
+        {% csrf_token %}
+        <input class="btn btn-primary" type="submit" value="Enroll to take the exam">
+    </form>
+    {% else %}
+    <p class="mt-3 text-muted">Log in and enroll to take the exam.</p>
+    {% endif %}
+</div>
+</body>
+</html>
